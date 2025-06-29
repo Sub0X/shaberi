@@ -129,7 +129,7 @@ env.bak/
 venv.bak/
 
 # Model Results in data
-data/*.json
+data/*/*/*/*.json
 
 # Spyder project settings
 .spyderproject
