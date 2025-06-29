@@ -13,7 +13,6 @@ import litellm
 from litellm import completion
 from openai import OpenAI
 
-# litellm.set_verbose=True
 
 # Global
 fp = 0.0
@@ -88,7 +87,6 @@ def get_model_response(messages: list, model_name: str, judge: bool = False) -> 
 
 
 # === 回答生成関数群 ===
-# @backoff.on_exception(backoff.fibo, Exception, max_tries=1000)
 @backoff.on_exception(backoff.fibo, Exception, max_tries=1000)
 def get_answer(question, model_name: str, judge: bool = False):
     # Use separate endpoint and key for judge if judge=True
@@ -100,10 +98,10 @@ def get_answer(question, model_name: str, judge: bool = False):
         base_url = ENV.get("OPENAI_BASE_URL", "http://localhost:8080/v1")
     if base_url is None:
         base_url = "http://localhost:8080/v1"
-    # print(f"[DEBUG] get_answer: judge={judge}, base_url={base_url}, api_key={api_key[:8]}...")
-
-    if judge and (not base_url or not api_key):
+    # Allow empty api_key if using localhost endpoint
+    if judge and (not base_url or (not api_key and not base_url.startswith("http://localhost"))):
         raise RuntimeError("Judge endpoint or API key not set! Refusing to fall back to OpenAI.")
+    # print(f"[DEBUG] get_answer: judge={judge}, base_url={base_url}, api_key={api_key[:8]}..., model_name={model_name}")
 
     generation_temperature = 0.2
     generation_max_tokens = 2048
@@ -154,7 +152,6 @@ def get_answer(question, model_name: str, judge: bool = False):
         completion_args['model'] = f'hosted_vllm/{model_name}'
         completion_args['frequency_penalty'] = fp
         completion_args['min_p'] = 0.1
-
 
     response = completion(**completion_args)
     content = response.choices[0].message.content

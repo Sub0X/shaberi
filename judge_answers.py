@@ -22,10 +22,14 @@ def evaluate(model_name: str, eval_dataset_name: str, evaluation_model: str, num
     eval_fn = eval_config["evaluator_function"]
 
     def debug_eval_fn(x, evaluation_model):
-        # print(f"Calling evaluator for: {x.get('Question', '')[:30]}... with model {evaluation_model}")
-        result = eval_fn(x, evaluation_model)
-        # print(f"Evaluator result: {result}")
-        return result
+        try:
+            # print(f"[DEBUG] Calling eval_fn with x={{'Question': x.get('Question', '')[:30]}}, evaluation_model={evaluation_model}")
+            result = eval_fn(x, evaluation_model)
+            # print(f"[DEBUG] eval_fn returned: {result}")
+            return result
+        except Exception as e:
+            print(f"[ERROR] Exception in eval_fn: {e}")
+            raise
 
     ans_dataset = ans_dataset.map(lambda x: {"score": debug_eval_fn(x, evaluation_model)}, num_proc=num_proc)
 
@@ -50,8 +54,7 @@ def main():
 
     parser.add_argument('-m', '--model_name', type=str, required=True)
     parser.add_argument('-d', '--eval_dataset_name', type=str, default='all')
-    # parser.add_argument('-e', '--evaluation_model', type=str, default='gpt-4-turbo-preview')
-    parser.add_argument('-e', '--evaluation_model', type=str, default='gpt-4.1-2025-04-14')
+    parser.add_argument('-e', '--evaluation_model', type=str, default='gpt-4.1')
     parser.add_argument('-n', '--num_proc', type=int, default=8)
 
     args = parser.parse_args()
