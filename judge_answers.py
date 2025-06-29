@@ -21,7 +21,13 @@ def evaluate(model_name: str, eval_dataset_name: str, evaluation_model: str, num
 
     eval_fn = eval_config["evaluator_function"]
 
-    ans_dataset = ans_dataset.map(lambda x: {"score": eval_fn(x, evaluation_model)}, num_proc=num_proc)
+    def debug_eval_fn(x, evaluation_model):
+        # print(f"Calling evaluator for: {x.get('Question', '')[:30]}... with model {evaluation_model}")
+        result = eval_fn(x, evaluation_model)
+        # print(f"Evaluator result: {result}")
+        return result
+
+    ans_dataset = ans_dataset.map(lambda x: {"score": debug_eval_fn(x, evaluation_model)}, num_proc=num_proc)
 
     # Remove reasoning/thinking segments from answers before judging
     ans_dataset = ans_dataset.map(

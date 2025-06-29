@@ -22,9 +22,13 @@ from rich.panel import Panel
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from rich.layout import Layout
 
+
 # Constants
-JUDGES = ['llmjudge-tulu405', 'llmjudge-llama33', 'llmjudge-athenev2']
+JUDGES = ['gpt-4.1', 'gpt-4o']
 TESTS = ['lightblue__tengu_bench', 'elyza__ELYZA-tasks-100', 'shisa-ai__ja-mt-bench-1shot', 'yuzuai__rakuda-questions']
+MODELS = [
+    "shisa-v2-qwen2.5-32b"
+]
 
 class JudgeState:
     def __init__(self, name: str, models: List[str]):
@@ -77,7 +81,7 @@ def run_judge(judge_state: JudgeState, stop_event: threading.Event):
         
         start_time = time.time()
         try:
-            cmd = [sys.executable, 'judge_answers.py', '-m', model, '-n', '64', '-e', judge_state.name]
+            cmd = [sys.executable, 'judge_answers.py', '-m', model, '-e', judge_state.name]
             
             # Use Popen to stream output
             process = subprocess.Popen(
@@ -164,7 +168,7 @@ def make_progress_panel(judge_state: JudgeState) -> Panel:
 def main():
     # Read model list from output.csv
     df = pd.read_csv('output.csv')
-    models = df['model_name'].unique().tolist()
+    models = MODELS
     
     # Replace '/' with '__' in model names
     models = [model.replace('/', '__') for model in models]

@@ -1,10 +1,13 @@
 import argparse
+import litellm
 
 from datasets import Dataset, load_dataset
 
 from evaluation_datasets_config import EVAL_MODEL_CONFIGS, get_ans_path
 import llm_functions
 from llm_functions import get_model_answer
+
+# litellm._turn_on_debug()
 
 
 def load_model_dataset(evaluation_dataset_name: str) -> Dataset:
@@ -34,7 +37,7 @@ def run_generate(model_name: str, eval_dataset_name: str = "all", num_proc: int 
         # 1. テストデータセットの読み込み
         dataset = load_model_dataset(dataset_name)
         # 2. モデルの回答の取得
-        dataset = get_model_answer(dataset, model_name, num_proc)
+        dataset = get_model_answer(dataset, model_name, num_proc, judge=False)
         model_answer_path = get_ans_path(dataset_name, model_name)
         dataset.to_json(model_answer_path)
 

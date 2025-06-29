@@ -99,7 +99,7 @@ def make_tengu_conversation(data: dict) -> list:
 
 def tengu_bench_evaluator(data:dict, model_name:str) -> int|None:
     messages = make_tengu_conversation(data)
-    evaluation = get_model_response(messages, model_name)
+    evaluation = get_model_response(messages, model_name, judge=True)
     return get_tengu_eval_score(evaluation)
 
 ######### ELYZA ##########
@@ -147,7 +147,7 @@ def get_elyza_prompt(row: dict):
 def elyza_evaluator(data: dict, model_name:str) -> int|None:
     prompt = get_elyza_prompt(data)
     messages = [{"role": "user", "content": prompt}]
-    evaluation = get_model_response(messages, model_name)
+    evaluation = get_model_response(messages, model_name, judge=True)
     try:
         # Try to find score in XML tags first
         score_match = re.search(r"<score>([0-9.]+)</score>", evaluation)
@@ -179,7 +179,7 @@ def get_mt_prompt(row: dict):
 def mt_evaluator(data: dict, model_name:str) -> int|None:
     prompt = get_mt_prompt(data)
     messages = [{"role": "user", "content": prompt}]
-    evaluation = get_model_response(messages, model_name)
+    evaluation = get_model_response(messages, model_name, judge=True)
     try:
         score_text = re.search(r"評価：\[\[[0-9.]+\]\]", evaluation).group()
         score = re.search(r"[0-9.]+", score_text).group()
@@ -208,7 +208,7 @@ def get_rakuda_prompt(row: dict):
 def rakuda_evaluator(data: dict, model_name:str) -> int|None:
     prompt = get_rakuda_prompt(data)
     messages = [{"role": "user", "content": prompt}]
-    evaluation = get_model_response(messages, model_name)
+    evaluation = get_model_response(messages, model_name, judge=True)
     try:
         score_text = re.search(r"評価：(\[\[|\[|【)[0-9.]+(\]\]|\]|】)", evaluation).group()
         score = re.search(r"[0-9.]+", score_text).group()

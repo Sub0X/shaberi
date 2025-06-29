@@ -1,6 +1,7 @@
 import backoff
 import litellm
 import os
+import json
 
 from datasets import Dataset
 import litellm
@@ -11,6 +12,11 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 litellm.set_verbose=True
+
+# --- Load environment variables from env.json ---
+with open('env.json', 'r', encoding='utf-8') as f:
+    ENV = json.load(f)
+# --- end env setup ---
 
 # Global
 fp = 0.0
@@ -23,7 +29,7 @@ tokenizer = None
 @backoff.on_exception(backoff.fibo, Exception, max_tries=1000)
 def get_response_from_openai(messages: list, model_name: str) -> str:
     client = OpenAI(
-        api_key=os.environ.get("OPENAI_API_KEY")
+        api_key=ENV.get("OPENAI_API_KEY")
     )
 
     evaluation_temperature = 0
@@ -56,7 +62,7 @@ def get_model_response(messages: list, model_name: str) -> str:
 # === 回答生成関数群 ===
 @backoff.on_exception(backoff.fibo, Exception, max_tries=1000)
 def get_answer(question: str, model_name: str):
-    api_key = os.environ.get("OPENAI_API_KEY", "EMPTY")
+    api_key = ENV.get("OPENAI_API_KEY", "EMPTY")
     if api_key == "EMPTY":
         base_url = "http://localhost:8000/v1"
     else:
