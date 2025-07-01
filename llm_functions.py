@@ -136,6 +136,7 @@ def get_answer(question, model_name: str, judge: bool = False):
         "api_key": api_key,
         "temperature": generation_temperature,
         "max_tokens": generation_max_tokens,
+        "timeout": 1200,
     }
 
     openai_prefixes = [
