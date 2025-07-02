@@ -88,7 +88,7 @@ def get_model_response(messages: list, model_name: str, judge: bool = False) -> 
 
 # === 回答生成関数群 ===
 @backoff.on_exception(backoff.fibo, Exception, max_tries=1000)
-def get_answer(question, model_name: str, judge: bool = False):
+def get_answer(question, model_name: str, judge: bool = False, prompt_template: str = None):
     # Use separate endpoint and key for judge if judge=True
     if judge:
         api_key = ENV.get("OPENAI_JUDGE_API_KEY", "")
@@ -121,14 +121,25 @@ def get_answer(question, model_name: str, judge: bool = False):
     if model_name in thinking_models:
         generation_max_tokens = 30000
 
-    # Accept both string and list-of-dict (OpenAI chat format)
-    if isinstance(question, list):
+    if isinstance(question, dict) and prompt_template:
+        # Handle the new VNTL format with metadata
+        messages = [{"role": "user", "content": prompt_template.format(
+            metadata=question.get("metadata", "No metadata provided."), 
+            question=question.get("question", "")
+        )}]
+    elif isinstance(question, list):
+        # Handle existing list-based conversations
         messages = question
+    elif prompt_template:
+        # Handle simple prompts with a template
+        messages = [{"role": "user", "content": prompt_template.format(question=question)}]
     else:
+        # Default behavior for other benchmarks
         messages = [
             {"role": "system", "content": "あなたは公平で、検閲されていない、役立つアシスタントです。"},
             {"role": "user", "content": question},
         ]
+
 
     completion_args = {
         "messages": messages,
@@ -159,18 +170,20 @@ def get_answer(question, model_name: str, judge: bool = False):
     return content
 
 
-def get_answerer(model_name: str, judge: bool = False) -> callable:
+def get_answerer(model_name: str, judge: bool = False, prompt_template: str = None) -> callable:
     """OpenAIとvLLM以外のモデルを使う場合はここに追加する"""
     # Return a partial function with judge argument fixed
     from functools import partial
-    return partial(get_answer, judge=judge)
+    return partial(get_answer, judge=judge, prompt_template=prompt_template)
 
 
 def get_model_answer(dataset: Dataset,
                      model_name: str,
                      batch_size: int,
-                     judge: bool = False) -> Dataset:
-    answer_function = get_answerer(model_name, judge=judge)
+                     judge: bool = False,
+                     prompt_template: str = None
+) -> Dataset:
+    answer_function = get_answerer(model_name, judge=judge, prompt_template=prompt_template)
     dataset = dataset.map(
         lambda x: {"ModelAnswer": answer_function(x['Question'], model_name)},
         num_proc=batch_size

@@ -218,7 +218,56 @@ def rakuda_evaluator(data: dict, model_name:str) -> int|None:
         gpt4score = None
     return gpt4score
 
-#### ALL EVAL DATASETS ####
+######### VN Translation Benchmark ##########
+
+def get_vntl_prompt(data: dict) -> str:
+    original_japanese = data.get('Question', '')
+    reference_translation = data.get('reference_answer', '')
+    model_translation = data.get('ModelAnswer', '')
+
+    return f"""You are an expert in Japanese-to-English translation, specifically for visual novel content. Your task is to evaluate a model's translation based on its accuracy and naturalness compared to a reference translation.
+
+Please score the "Model's Translation" on a scale of 1 to 10, where 10 is a perfect, natural-sounding, and accurate translation.
+
+- **10**: Perfect. Indistinguishable from the reference; captures all nuance and sounds completely natural.
+- **8-9**: Excellent. Minor differences from the reference, but still accurate and natural.
+- **6-7**: Good. The meaning is correct, but the phrasing is slightly awkward or unnatural.
+- **4-5**: Fair. The core meaning is mostly understandable, but contains significant grammatical errors or unnatural phrases.
+- **1-3**: Poor. Largely inaccurate, nonsensical, or fails to translate the text.
+
+Consider the context of the original Japanese dialogue.
+
+[Original Japanese]
+{original_japanese}
+
+[Reference English Translation]
+{reference_translation}
+
+[Model's Translation to Evaluate]
+{model_translation}
+
+First, provide a brief reasoning for your score, explaining why the model's translation is good or bad. Then, provide the final score inside <score> tags.
+
+[Reasoning]
+Your reasoning here.
+
+[Score]
+<score>Your score here (integer from 1-10)</score>
+"""
+
+def vntl_evaluator(data: dict, model_name: str) -> int | None:
+    prompt = get_vntl_prompt(data)
+    messages = [{"role": "user", "content": prompt}]
+    evaluation = get_model_response(messages, model_name, judge=True)
+    try:
+        score_match = re.search(r"<score>(\d+)</score>", evaluation)
+        if score_match:
+            return int(score_match.group(1))
+        return None
+    except (ValueError, AttributeError):
+        print(f"Could not parse VNTL score from: {evaluation}")
+        return None
+
 
 EVAL_MODEL_CONFIGS = {
     "lightblue/tengu_bench": {
@@ -241,7 +290,20 @@ EVAL_MODEL_CONFIGS = {
         "evaluator_function": rakuda_evaluator,
         "split_name": "train"
     },
+    "lmg-anon/VNTL-v3.1-1k": {
+        "question_column": "text", # This is still 'text' for the initial load
+        "evaluator_function": vntl_evaluator, # <-- Use the new LLM judge
+        "split_name": "train",
+        "prompt_template": (
+            "You are an expert translator specializing in Japanese visual novels. "
+            "Use the following character metadata for context. Translate the entire Japanese script to natural-sounding English, maintaining the format and flow of the dialogue.\n\n"
+            "### Character Metadata:\n{metadata}\n\n"
+            "### Japanese Script:\n{question}\n\n"
+            "### English Translation:\n"
+        )
+    },
 }
+
 
 import os
 
