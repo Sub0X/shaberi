@@ -13,7 +13,7 @@ A repo for evaluating Japanese LLMs　・　日本語LLMを評価するレポ
 ## How to Run
 ```sh
 # Get code
-git clone https://github.com/shisa-ai/shaberi
+git clone https://github.com/Sub0x/shaberi
 cd shaberi
 
 # Create Environment, Install requirements
