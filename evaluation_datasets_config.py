@@ -291,8 +291,8 @@ EVAL_MODEL_CONFIGS = {
         "split_name": "train"
     },
     "lmg-anon/VNTL-v3.1-1k": {
-        "question_column": "text", # This is still 'text' for the initial load
-        "evaluator_function": vntl_evaluator, # <-- Use the new LLM judge
+        "question_column": "text",
+        "evaluator_function": vntl_evaluator,
         "split_name": "train",
         "prompt_template": (
             "You are an expert translator specializing in Japanese visual novels. "
