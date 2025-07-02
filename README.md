@@ -49,9 +49,6 @@ make judge fp=0.5 n=1 m=MODEL_NAME d=DATASET e=EVALUATOR
 # Make sure you have new answers and judgements
 git status
 
-# To generate updated results
-python results_vizualization.py
-cat output.csv
 ```
 
 ## About env.json
@@ -80,9 +77,6 @@ Example `env.json`:
 - Evaluate Japanese LLMs on multiple benchmarks, including the new VNTL translation benchmark.
 - Use separate endpoints for answer generation and judging.
 - Robust multiprocessing support for large-scale evaluation.
-
----
-For more details, see the code and comments in `env.json`, `generate_answers.py`, and `judge_answers.py`.
 
 ---
 
