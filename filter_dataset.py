@@ -145,8 +145,8 @@ def create_sfw_dataset_with_ml(dataset_name: str, batch_size: int):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Filter a dataset for SFW content using a three-stage process.")
     
-    parser.add_argument('--dataset_name', type=str, default="lmg-anon/VNTL-v3.1-1k")
-    parser.add_argument('--batch_size', type=int, default=256)
+    parser.add_argument('-d', '--dataset_name', type=str, default="lmg-anon/VNTL-v3.1-1k")
+    parser.add_argument('-b', '--batch_size', type=int, default=256)
     
     args = parser.parse_args()
     

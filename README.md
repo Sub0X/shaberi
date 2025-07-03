@@ -42,9 +42,14 @@ python judge_answers.py -m shisa-ai/shisa-v1-llama3-8b
 
 # Or use the Makefile for easier command-line usage:
 # Example: generate answers with options
-make generate fp=0.5 n=1 m=MODEL_NAME d=DATASET
+make generate m=MODEL_NAME d=DATASET n=NUM_PROC fp=FREQ_PENALTY me=MAX_ENTRIES
 # Example: judge answers with options (including evaluator)
-make judge fp=0.5 n=1 m=MODEL_NAME d=DATASET e=EVALUATOR
+make judge m=MODEL_NAME d=DATASET e=EVALUATOR n=NUM_PROC
+# Example: filter dataset for SFW content
+make filter d=DATASET b=BATCH_SIZE
+
+# Show help for all Makefile targets
+make help
 
 # Make sure you have new answers and judgements
 git status
@@ -59,9 +64,16 @@ git status
 Example `env.json`:
 ```json
 {
-  "OPENAI_API_KEY": "sk-...",
+  "OPENAI_API_KEY": [
+    "sk-...",
+    "sk-..."
+  ],
+  "JUDGE_API_KEY": [
+    "sk-...",
+    "sk-..."
+  ],
+  
   "OPENAI_API_BASE": "http://localhost:8000/v1",
-  "JUDGE_API_KEY": "sk-...",
   "JUDGE_API_BASE": "http://localhost:8001/v1"
 }
 ```
@@ -122,8 +134,12 @@ python generate_answers.py --model_name 'shisa-ai/shisa-v1-llama3-8b' -fp 0.5
 python judge_answers.py -m shisa-ai/shisa-v1-llama3-8b
 
 # Makefileを使ったコマンド例
-make generate fp=0.5 n=1 m=MODEL名 d=データセット名
-make judge fp=0.5 n=1 m=MODEL名 d=データセット名 e=評価モデル名
+make generate m=MODEL名 d=データセット名 n=NUM_PROC fp=FREQ_PENALTY me=MAX_ENTRIES
+make judge m=MODEL名 d=データセット名 e=評価モデル名 n=NUM_PROC
+make filter d=データセット名 b=BATCH_SIZE
+
+# 利用可能なMakefileターゲットのヘルプ表示
+make help
 
 # 回答・評価結果の確認
 git status
