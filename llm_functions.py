@@ -13,69 +13,10 @@ import litellm
 from litellm import completion
 from openai import OpenAI
 
+# litellm._turn_on_debug()
 
 # Global
 fp = 0.0
-
-
-# === 評価生成関数群 ===
-@backoff.on_exception(backoff.fibo, Exception, max_tries=1000)
-def get_response_from_openai(messages: list, model_name: str) -> str:
-    client = OpenAI(
-        api_key=ENV.get("OPENAI_API_KEY"),
-        base_url=ENV.get("OPENAI_BASE_URL", None),
-    )
-
-    evaluation_temperature = 0
-    evaluation_max_tokens = 1024
-
-    response = client.chat.completions.create(
-        messages=messages,
-        model=model_name,
-        temperature=evaluation_temperature,
-        max_tokens=evaluation_max_tokens,
-    )
-    return response.choices[0].message.content
-
-# shisa-bench llmjudge
-@backoff.on_exception(backoff.fibo, Exception, max_tries=1000)
-def get_response_from_llmjudge(messages: list, model_name: str) -> str:
-    judge = model_name.split("-")[1]
-    if judge == "tulu405":
-        base_url = "http://ip-10-1-85-83:8000/v1"
-
-        base_url = "http://tulu405/v1"
-        model_name = "Llama-3.1-Tulu-3-405B-FP8-Dynamic"
-
-        model_name = "shisa-ai/Llama-3.1-Tulu-3-405B-FP8-Dynamic"
-    elif judge == "llama33":
-        base_url = "http://ip-10-1-33-173:8001/v1"
-        model_name = "meta-llama/Llama-3.3-70B-Instruct"
-
-        base_url = "http://llama33/v1"
-        model_name = "llama-3.3-70b-ray"
-    elif judge == "athenev2":
-        base_url = "http://ip-10-1-33-173:8000/v1"
-        model_name = "Nexusflow/Athene-V2-Chat"
-
-        base_url = "http://athenev2/v1"
-        model_name = "athene-v2"
-    client = OpenAI(
-        api_key=ENV.get("OPENAI_API_KEY"),
-        base_url=base_url,
-    )
-
-    evaluation_temperature = 0
-    evaluation_max_tokens = 1024
-
-    response = client.chat.completions.create(
-        messages=messages,
-        model=model_name,
-        temperature=evaluation_temperature,
-        max_tokens=evaluation_max_tokens,
-    )
-    return response.choices[0].message.content
-
 
 def get_response_func(model_name: str) -> callable:
     return get_answer
@@ -87,7 +28,7 @@ def get_model_response(messages: list, model_name: str, judge: bool = False) -> 
 
 
 # === 回答生成関数群 ===
-@backoff.on_exception(backoff.fibo, Exception, max_tries=1000)
+# @backoff.on_exception(backoff.fibo, Exception, max_tries=1000)
 def get_answer(question, model_name: str, judge: bool = False, prompt_template: str = None):
     # Use separate endpoint and key for judge if judge=True
     if judge:
@@ -101,7 +42,8 @@ def get_answer(question, model_name: str, judge: bool = False, prompt_template: 
     # Allow empty api_key if using localhost endpoint
     if judge and (not base_url or (not api_key and not base_url.startswith("http://localhost"))):
         raise RuntimeError("Judge endpoint or API key not set! Refusing to fall back to OpenAI.")
-    # print(f"[DEBUG] get_answer: judge={judge}, base_url={base_url}, api_key={api_key[:8]}..., model_name={model_name}")
+    
+    # print(f"[DEBUG] get_answer: judge={judge}, base_url={base_url}, api_key={api_key}..., model_name={model_name}")
 
     generation_temperature = 0.2
     generation_max_tokens = 2048
@@ -148,22 +90,11 @@ def get_answer(question, model_name: str, judge: bool = False, prompt_template: 
         "temperature": generation_temperature,
         "max_tokens": generation_max_tokens,
         "timeout": 1200,
+        "model": model_name,
+        "frequency_penalty": fp,
+        "min_p": 0.1,
+        "custom_llm_provider": "openai"
     }
-
-    openai_prefixes = [
-        "gpt-", "text-davinci-", "davinci", "curie", "babbage", "ada", 
-        "whisper", "claude", "text-embedding", "openai/", "openai:"
-    ]
-    if any(model_name.startswith(prefix) for prefix in openai_prefixes):
-        completion_args['model'] = model_name
-    elif model_name.startswith("gemini"):
-        completion_args['model'] = model_name
-        completion_args.pop('api_base', None)
-        completion_args['api_key'] = ENV.get("GEMINI_API_KEY", "")
-    else:
-        completion_args['model'] = f'hosted_vllm/{model_name}'
-        completion_args['frequency_penalty'] = fp
-        completion_args['min_p'] = 0.1
 
     response = completion(**completion_args)
     content = response.choices[0].message.content

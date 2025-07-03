@@ -164,6 +164,8 @@ cython_debug/
 env.json
 model-size_vs_score.svg
 
+/datasets/*.jsonl
+
 /data/*/*/*.json
 summary_output.csv
 output.csv
