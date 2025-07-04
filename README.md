@@ -57,7 +57,7 @@ git status
 ```
 
 ## About env.json
-- Place your OpenAI-compatible API keys and endpoints in `env.json`.
+- Place your OpenAI-compatible API keys and endpoints in `env.json`. This allows for requests to be distributed across multiple tokens if one and the following reaches rate limit.
 - You can specify separate endpoints for the target model and the judge model.
 - This approach ensures all processes (including those spawned via multiprocessing) have access to the correct environment variables.
 
@@ -73,7 +73,7 @@ Example `env.json`:
     "sk-..."
   ],
   
-  "OPENAI_API_BASE": "http://localhost:8000/v1",
+  "OPENAI_API_BASE": "https://generativelanguage.googleapis.com/v1beta/openai",
   "JUDGE_API_BASE": "http://localhost:8001/v1"
 }
 ```
