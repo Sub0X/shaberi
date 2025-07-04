@@ -38,17 +38,26 @@ def run_generate(model_name: str, eval_dataset_name: str = "all", num_proc: int 
     eval_dataset_names = list(EVAL_MODEL_CONFIGS.keys()) if eval_dataset_name == "all" else [eval_dataset_name]
 
     for dataset_name in eval_dataset_names:
+        # Construct the expected output path first
+        model_answer_path = get_ans_path(dataset_name, model_name)
+        
+        # Check if the file already exists
+        if os.path.exists(model_answer_path):
+            print(f"Answers for '{model_name}' on '{dataset_name}' already exist. Skipping.")
+            continue # Move to the next benchmark in the loop
+
+        
         eval_config = EVAL_MODEL_CONFIGS[dataset_name]
 
         # --- Check for local file before downloading ---
         local_filepath = os.path.join("datasets", dataset_name.replace("/", "__") + ".jsonl")
         if os.path.exists(local_filepath):
             print(f"Found local dataset file. Loading from: '{local_filepath}'")
-            dataset = load_dataset('json', data_files=local_filepath, split='train')
+            dataset = load_dataset('json', data_files=local_filepath, split='train', keep_in_memory=True)
         else:
             print(f"Local file not found. Loading '{dataset_name}' from Hugging Face Hub...")
             split_name = eval_config.get("split_name", "test")
-            dataset = load_dataset(dataset_name, split=split_name)
+            dataset = load_dataset(dataset_name, split=split_name, keep_in_memory=True)
         
         # Limit entries after loading, regardless of source
         if len(dataset) > MAX_ENTRIES:
@@ -96,7 +105,7 @@ def main():
     parser.add_argument('-m', '--model_name', type=str, required=True)
     parser.add_argument('-d', '--eval_dataset_name', type=str, default='all')
     parser.add_argument('-n', '--num_proc', type=int, default=8)
-    parser.add_argument('-fp', '--frequency_penalty', type=float, default=1.0)
+    parser.add_argument('-fp', '--frequency_penalty', type=float, default=0.5)
     parser.add_argument('-me', '--max_entries', type=int, default=200)
     args = parser.parse_args()
     run_generate(args.model_name, args.eval_dataset_name, args.num_proc, args.max_entries)

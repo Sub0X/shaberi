@@ -1,5 +1,6 @@
 import re
 from llm_functions import get_model_response
+import orjson
 
 ######### TENGU ##########
 
@@ -218,54 +219,122 @@ def rakuda_evaluator(data: dict, model_name:str) -> int|None:
         gpt4score = None
     return gpt4score
 
+
 ######### VN Translation Benchmark ##########
 
-def get_vntl_prompt(data: dict) -> str:
+def get_vntl_prompt_multi_score(data: dict) -> str:
+    """
+    Creates a detailed prompt for the LLM judge, asking it to evaluate a translation
+    against a reference based on a strict protocol.
+    """
     original_japanese = data.get('Question', '')
     reference_translation = data.get('reference_answer', '')
     model_translation = data.get('ModelAnswer', '')
+    metadata = data.get('metadata', 'No metadata provided.')
 
-    return f"""You are an expert in Japanese-to-English translation, specifically for visual novel content. Your task is to evaluate a model's translation based on its accuracy and naturalness compared to a reference translation.
+    return f"""You are an expert evaluator for Japanese-to-English visual novel translations. Your task is to score the "Model's Translation" on six criteria by comparing it to the reference translation and the original Japanese.
 
-Please score the "Model's Translation" on a scale of 1 to 10, where 10 is a perfect, natural-sounding, and accurate translation.
+### **Evaluation Criteria & Scoring (Scale 1-10):**
 
-- **10**: Perfect. Indistinguishable from the reference; captures all nuance and sounds completely natural.
-- **8-9**: Excellent. Minor differences from the reference, but still accurate and natural.
-- **6-7**: Good. The meaning is correct, but the phrasing is slightly awkward or unnatural.
-- **4-5**: Fair. The core meaning is mostly understandable, but contains significant grammatical errors or unnatural phrases.
-- **1-3**: Poor. Largely inaccurate, nonsensical, or fails to translate the text.
+1.  **Accuracy (1-10):** How faithful is the translation to the original Japanese meaning?
+    * **9-10 (Excellent):** Flawlessly conveys the original meaning and all subtleties.
+    * **7-8 (Good):** The core meaning is correct, but minor nuances may be lost.
+    * **5-6 (Fair):** The main point is translated, but there are noticeable inaccuracies.
+    * **3-4 (Poor):** Significant parts of the meaning are lost or mistranslated.
+    * **1-2 (Very Poor):** Completely misunderstands or fails to translate the source text.
 
-Consider the context of the original Japanese dialogue.
+2.  **Fluency (1-10):** How natural and grammatically correct is the English?
+    * **9-10 (Excellent):** Reads like it was written by a native English speaker; grammatically perfect.
+    * **7-8 (Good):** Only minor grammatical awkwardness that doesn't impede understanding.
+    * **5-6 (Fair):** Contains noticeable grammatical errors or unnatural phrasing.
+    * **3-4 (Poor):** Difficult to read due to grammatical mistakes.
+    * **1-2 (Very Poor):** Largely ungrammatical or nonsensical.
 
-[Original Japanese]
+3.  **Character Voice (1-10):** Does the translation reflect the character's personality and speaking style?
+    * **9-10 (Excellent):** The character's unique personality, speech patterns, and formality level are perfectly captured.
+    * **7-8 (Good):** The voice is mostly correct but may miss some subtle character-specific tics.
+    * **5-6 (Fair):** The character is recognizable, but the translation often feels generic.
+    * **3-4 (Poor):** The translation uses a voice that is inconsistent with or contradicts the character.
+    * **1-2 (Very Poor):** The character's voice is completely lost or misrepresented.
+
+4.  **Tone (1-10):** Does the translation capture the emotional mood of the scene?
+    * **9-10 (Excellent):** The emotional mood (e.g., tension, humor, sadness) is perfectly conveyed.
+    * **7-8 (Good):** The general tone is correct, but some emotional subtleties are missed.
+    * **5-6 (Fair):** The tone is often flat or doesn't fully match the scene's emotional context.
+    * **3-4 (Poor):** The tone is mismatched with the scene (e.g., sounds cheerful during a serious moment).
+    * **1-2 (Very Poor):** The tone is completely wrong and undermines the scene's intent.
+
+5.  **Localization (1-10):** How well are cultural nuances, idioms, and onomatopoeia handled?
+    * **9-10 (Excellent):** Cultural nuances are handled cleverly, and onomatopoeia (e.g., "doki doki") is preserved correctly and naturally.
+    * **7-8 (Good):** Nuances and onomatopoeia are handled correctly but might feel slightly forced.
+    * **5-6 (Fair):** Attempts to handle nuances but may be literal or slightly confusing. Onomatopoeia might be incorrectly translated instead of transliterated.
+    * **3-4 (Poor):** Cultural references are misunderstood or ignored.
+    * **1-2 (Very Poor):** Fails completely to address cultural specifics.
+
+6.  **Direction Following (1-10):** How strictly did the model follow the formatting protocol?
+    * **9-10 (Perfect):** Flawlessly adheres to all rules. All dialogue uses the exact `SPEAKER: "DIALOGUE"` format, all honorifics are preserved, and there is **zero** added commentary or formatting.
+    * **7-8 (Minor Errors):** Mostly compliant, but with very minor, occasional errors (e.g., a single instance of a missing space after the colon, or incorrect punctuation). The intent to follow the rules is clear.
+    * **5-6 (Noticeable Errors):** Several formatting errors are present (e.g., inconsistent spacing, occasionally forgets quotes, mixes dialogue formats).
+    * **3-4 (Major Errors):** The model regularly fails to use the required `SPEAKER: "DIALOGUE"` format, often omits honorifics, or adds some conversational filler.
+    * **1-2 (No Adherence):** The model completely ignores the formatting rules, adding its own tags (like 'said' or 'replied'), inventing speakers, or failing to format dialogue correctly at all.
+---
+[Context & Metadata]
+{metadata}
+
+[Original Japanese Script]
 {original_japanese}
 
-[Reference English Translation]
+[Reference English Translation (For context on quality)]
 {reference_translation}
 
 [Model's Translation to Evaluate]
 {model_translation}
 
-First, provide a brief reasoning for your score, explaining why the model's translation is good or bad. Then, provide the final score inside <score> tags.
+---
+First, provide a brief reasoning for your scores based on the criteria. Then, provide all six scores as a JSON object inside <scores_json> tags.
 
 [Reasoning]
 Your reasoning here.
 
-[Score]
-<score>Your score here (integer from 1-10)</score>
+[Scores]
+<scores_json>
+{{
+  "score_accuracy": <int_from_1_to_10>,
+  "score_fluency": <int_from_1_to_10>,
+  "score_character_voice": <int_from_1_to_10>,
+  "score_tone": <int_from_1_to_10>,
+  "score_localization": <int_from_1_to_10>,
+  "score_direction_following": <int_from_1_to_10>
+}}
+</scores_json>
 """
 
-def vntl_evaluator(data: dict, model_name: str) -> int | None:
-    prompt = get_vntl_prompt(data)
+def vntl_multi_score_evaluator(data: dict, model_name: str) -> dict | None:
+    """
+    Calls the LLM judge with the detailed VNTL prompt and parses the six-part score.
+    """
+    prompt = get_vntl_prompt_multi_score(data)
     messages = [{"role": "user", "content": prompt}]
+    
     evaluation = get_model_response(messages, model_name, judge=True)
+    
     try:
-        score_match = re.search(r"<score>(\d+)</score>", evaluation)
-        if score_match:
-            return int(score_match.group(1))
-        return None
-    except (ValueError, AttributeError):
-        print(f"Could not parse VNTL score from: {evaluation}")
+        # Use regex to find the JSON block. re.DOTALL allows '.' to match newlines.
+        json_match = re.search(r"<scores_json>(.*?)</scores_json>", evaluation, re.DOTALL)
+        if json_match:
+            json_str = json_match.group(1)
+            scores = orjson.loads(json_str)
+            # Check for all six expected score keys
+            expected_keys = [
+                "score_accuracy", "score_fluency", "score_character_voice", 
+                "score_tone", "score_localization", "score_direction_following"
+            ]
+            if all(key in scores for key in expected_keys):
+                return scores
+        raise ValueError("Could not find all required score keys in the JSON block.")
+    except (orjson.JSONDecodeError, AttributeError, ValueError) as e:
+        print(f"Could not parse VNTL scores from evaluation. Error: {e}")
+        print(f"Evaluation content:\\n{evaluation}")
         return None
 
 
@@ -292,11 +361,14 @@ EVAL_MODEL_CONFIGS = {
     },
     "lmg-anon/VNTL-v3.1-1k": {
         "question_column": "text",
-        "evaluator_function": vntl_evaluator,
+        "evaluator_function": vntl_multi_score_evaluator,
         "split_name": "train",
         "prompt_template": (
-            "You are an expert translator specializing in Japanese visual novels. "
-            "Use the following character metadata for context. Translate the entire Japanese script to natural-sounding English, maintaining the format and flow of the dialogue.\n\n"
+            "You are an expert visual novel translator. Translate the following Japanese script into natural English. "
+            "Follow these strict rules:\n"
+            "1.  **Dialogue Format:** If a speaker is present, the output MUST be `SPEAKER_NAME: \"DIALOGUE\"`. For narration with no speaker, output only the translated text.\n"
+            "2.  **No Commentary:** Do NOT add any extra text, explanations, or dialogue tags like 'said' or 'asked'.\n"
+            "3.  **Preserve Elements:** Keep all Japanese honorifics (e.g., -san, -sama) and transliterate onomatopoeia (e.g., 'doki doki').\n\n"
             "### Character Metadata:\n{metadata}\n\n"
             "### Japanese Script:\n{question}\n\n"
             "### English Translation:\n"

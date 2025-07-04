@@ -15,25 +15,47 @@ reasoning_pattern = re.compile(r'<(think|thinking|reason)>.*?</(think|thinking|r
 def evaluate_with_llm(model_name: str, eval_dataset_name: str, evaluation_model: str, num_proc: int):
     """
     Evaluates answers using a Language Model as a judge.
+    This version handles both single scores and a dictionary of scores,
+    and correctly merges all data into the final output.
     """
     model_answer_path = get_ans_path(eval_dataset_name, model_name)
-    # Make sure to load the reference answer from the generated file
     ans_dataset = load_dataset('json', data_files=model_answer_path, split="train")
     
     eval_config = EVAL_MODEL_CONFIGS.get(eval_dataset_name)
     eval_fn = eval_config["evaluator_function"]
 
-    # Remove reasoning/thinking segments from answers before judging
     ans_dataset = ans_dataset.map(
         lambda x: {"ModelAnswer": reasoning_pattern.sub("", x.get("ModelAnswer", ""))},
         num_proc=num_proc,
     )
     
-    ans_dataset = ans_dataset.map(lambda x: {"score": eval_fn(x, evaluation_model)}, num_proc=num_proc)
+    def apply_eval_and_unpack(data_row):
+        scores = eval_fn(data_row, evaluation_model)
+        if isinstance(scores, dict):
+            # If the evaluator returns a dictionary, return it to be added as new columns
+            return scores
+        else:
+            # Otherwise, handle it as a single score
+            return {"score": scores}
 
+    # 1. Get the scores as a new dataset
+    results_dataset = ans_dataset.map(apply_eval_and_unpack, batched=False)
+    
+    # 2. Get the names of the new score columns
+    new_columns = list(results_dataset.features)
+    
+    # 3. Add the new score columns to the original dataset
+    final_dataset = ans_dataset
+    for col_name in new_columns:
+        # Check if column already exists from a partial run, and remove it if so
+        if col_name in final_dataset.column_names:
+            final_dataset = final_dataset.remove_columns([col_name])
+        final_dataset = final_dataset.add_column(name=col_name, column=results_dataset[col_name])
+    
     output_dir = os.path.join(".", "data", "judgements", f"judge_{evaluation_model.replace('/', '__')}", eval_dataset_name.replace("/", "__"))
     os.makedirs(output_dir, exist_ok=True)
-    ans_dataset.to_json(os.path.join(output_dir, model_name.replace("/", "__") + ".json"))
+    # Save the combined dataset which now includes all original and new columns
+    final_dataset.to_json(os.path.join(output_dir, model_name.replace("/", "__") + ".json"))
     print(f"✅ LLM-based judgements saved to {output_dir}")
 
 def evaluate_with_metrics(model_name: str, eval_dataset_name: str):
@@ -81,6 +103,20 @@ def run_judgement(model_name: str, eval_dataset_name: str = "all", evaluation_mo
             continue
             
         evaluation_type = eval_config.get("evaluation_type", "llm") # Default to 'llm'
+        
+        # Determine the expected output path based on the evaluation type
+        if evaluation_type == "metric":
+            output_dir = os.path.join(".", "data", "judgements", "metrics", eval_ds_name.replace("/", "__"))
+            output_filepath = os.path.join(output_dir, model_name.replace("/", "__") + ".csv")
+        else: # Default is "llm"
+            output_dir = os.path.join(".", "data", "judgements", f"judge_{evaluation_model.replace('/', '__')}", eval_ds_name.replace("/", "__"))
+            output_filepath = os.path.join(output_dir, model_name.replace("/", "__") + ".json")
+
+        # Check if the judgment file already exists
+        if os.path.exists(output_filepath):
+            print(f"Judgement for '{model_name}' on '{eval_ds_name}' already exists. Skipping.")
+            continue
+
 
         if evaluation_type == "metric":
             print(f"Judging {model_name} on {eval_ds_name} using metrics")

@@ -166,6 +166,11 @@ model-size_vs_score.svg
 
 /datasets/*.jsonl
 
-/data/*/*/*.json
 summary_output.csv
 output.csv
+
+**/judgements/**/*.json
+**/model_answers/**/*.json
+
+!**/judgements/**/.placeholder
+!**/model_answers/**/.placeholder
