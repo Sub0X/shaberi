@@ -92,9 +92,7 @@ Example `env.json`:
 
 ## Results
 
-![Model Score Comparison (Vertical)](assets/results/vertical_bar_chart_gpt-4.1.png)
 
-![Model Score Visual Novel Translation Comparison (Vertical)](assets/results/vntl_grid_gpt-4.1.png)
 
 ---
 
