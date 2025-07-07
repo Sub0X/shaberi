@@ -20,3 +20,6 @@ judge:
 
 filter:
 	python ./filter_dataset.py $(if $(d),-d $(d)) $(if $(b),-b $(b)) $(ARGS)
+
+organize:
+	python ./organize_views.py

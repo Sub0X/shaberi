@@ -5,6 +5,7 @@ import os
 import json
 import random
 import time
+import threading
 
 # --- Load environment variables from env.json ---
 with open('env.json', 'r', encoding='utf-8') as f:
@@ -18,6 +19,8 @@ from litellm import completion
 
 # Global
 fp = 0.0
+_key_counter = 0
+_key_counter_lock = threading.Lock()
 
 def get_response_func(model_name: str) -> callable:
     return get_answer
@@ -45,7 +48,19 @@ def completion_with_backoff(**kwargs):
 
 
 # === 回答生成関数群 ===
+@backoff.on_exception(
+    backoff.expo,
+    (litellm.RateLimitError, litellm.InternalServerError, litellm.APIConnectionError, litellm.Timeout),
+    max_tries=5,
+    max_time=300
+)
+def get_answer_with_backoff(*args, **kwargs):
+    return _get_answer_inner(*args, **kwargs)
+
 def get_answer(question, model_name: str, judge: bool = False, prompt_template: str = None):
+    return get_answer_with_backoff(question, model_name, judge, prompt_template)
+
+def _get_answer_inner(question, model_name: str, judge: bool = False, prompt_template: str = None):
     if judge:
         api_keys = ENV.get("OPENAI_JUDGE_API_KEY", [])
         base_url = ENV.get("OPENAI_JUDGE_BASE_URL", "")
@@ -66,7 +81,7 @@ def get_answer(question, model_name: str, judge: bool = False, prompt_template: 
         base_url = "http://localhost:8080/v1"
     
     generation_temperature = 0.2
-    generation_max_tokens = 30000
+    generation_max_tokens = 6000
 
     if isinstance(question, dict) and prompt_template:
         messages = [{"role": "user", "content": prompt_template.format(
@@ -83,10 +98,14 @@ def get_answer(question, model_name: str, judge: bool = False, prompt_template: 
             {"role": "user", "content": question},
         ]
 
-    last_exception = None
-    for i, key in enumerate(api_keys):
-        is_last_key = (i == len(api_keys) - 1)
-        
+    # --- Round-robin key selection with retry on rate limit ---
+    global _key_counter
+    num_keys = len(api_keys)
+    for attempt in range(num_keys):
+        with _key_counter_lock:
+            key_index = _key_counter % num_keys
+            _key_counter += 1
+        key = api_keys[key_index]
         try:
             completion_args = {
                 "messages": messages, "api_base": base_url, "api_key": key,
@@ -94,42 +113,21 @@ def get_answer(question, model_name: str, judge: bool = False, prompt_template: 
                 "timeout": 1200, "model": model_name, "frequency_penalty": fp,
                 "min_p": 0.1, "custom_llm_provider": "openai"
             }
-            
             if "google" in base_url:
                 completion_args.pop("frequency_penalty", None)
                 completion_args.pop("min_p", None)
-
-            if is_last_key:
-                # print(f"[INFO] Using final key with retry logic...")
-                response = completion_with_backoff(**completion_args)
-            else:
-                # print(f"[DEBUG] Attempting API call with key ending in '...{key[-4:]}'")
-                response = completion(**completion_args)
-            
+            response = completion(**completion_args)
             content = response.choices[0].message.content
             return content
-
         except litellm.RateLimitError as e:
-            print(f"[WARN] Rate limit hit for key ending in '...{key[-4:]}'. Switching to next key.")
-            last_exception = e
+            print(f"[WARN] Rate limit hit for key ending in '...{key[-4:]}'. Trying next key.")
             continue
         except Exception as e:
             print(f"[ERROR] An unexpected error occurred with key ending in '...{key[-4:]}': {e}")
-            last_exception = e
-            if not is_last_key:
-                continue # Try the next key
-            else:
-                break # Exit loop if it's the last key
-
-    # --- THIS IS THE KEY CHANGE ---
-    # Instead of re-raising the complex litellm error, we raise a standard RuntimeError.
-    # This prevents the multiprocessing pickle error.
-    if last_exception:
-        print("[ERROR] All API keys have failed. The final error will be raised.")
-        raise RuntimeError(f"All API keys failed. Last error: {str(last_exception)}")
-    else:
-        raise RuntimeError("Could not complete the API request with any of the provided keys.")
-    # --- END OF KEY CHANGE ---
+            # Re-raise as a standard error to avoid multiprocessing pickle issues
+            raise RuntimeError(f"LLM error: {e}")
+    # If all keys hit rate limit, raise to trigger backoff
+    raise RuntimeError("All API keys hit rate limit.")
 
 
 def get_answerer(model_name: str, judge: bool = False, prompt_template: str = None) -> callable:

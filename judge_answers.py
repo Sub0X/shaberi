@@ -8,9 +8,21 @@ import pandas as pd
 import sacrebleu
 from datasets import load_dataset
 from evaluation_datasets_config import EVAL_MODEL_CONFIGS, get_ans_path
-
+import functools
 
 reasoning_pattern = re.compile(r'<(think|thinking|reason)>.*?</(think|thinking|reason)>', re.DOTALL | re.IGNORECASE)
+
+def remove_reasoning_tags(x):
+    return {"ModelAnswer": reasoning_pattern.sub("", x.get("ModelAnswer", ""))}
+
+def apply_eval_and_unpack(data_row, eval_fn, evaluation_model):
+    scores = eval_fn(data_row, evaluation_model)
+    if isinstance(scores, dict):
+        # If the evaluator returns a dictionary, return it to be added as new columns
+        return scores
+    else:
+        # Otherwise, handle it as a single score
+        return {"score": scores}
 
 def evaluate_with_llm(model_name: str, eval_dataset_name: str, evaluation_model: str, num_proc: int):
     """
@@ -24,22 +36,12 @@ def evaluate_with_llm(model_name: str, eval_dataset_name: str, evaluation_model:
     eval_config = EVAL_MODEL_CONFIGS.get(eval_dataset_name)
     eval_fn = eval_config["evaluator_function"]
 
-    ans_dataset = ans_dataset.map(
-        lambda x: {"ModelAnswer": reasoning_pattern.sub("", x.get("ModelAnswer", ""))},
-        num_proc=num_proc,
-    )
-    
-    def apply_eval_and_unpack(data_row):
-        scores = eval_fn(data_row, evaluation_model)
-        if isinstance(scores, dict):
-            # If the evaluator returns a dictionary, return it to be added as new columns
-            return scores
-        else:
-            # Otherwise, handle it as a single score
-            return {"score": scores}
+    # Use top-level function for multiprocessing compatibility
+    ans_dataset = ans_dataset.map(remove_reasoning_tags, num_proc=num_proc)
 
-    # 1. Get the scores as a new dataset
-    results_dataset = ans_dataset.map(apply_eval_and_unpack, batched=False)
+    # Use functools.partial to pass extra args to the top-level function
+    eval_and_unpack = functools.partial(apply_eval_and_unpack, eval_fn=eval_fn, evaluation_model=evaluation_model)
+    results_dataset = ans_dataset.map(eval_and_unpack, batched=False, num_proc=num_proc)
     
     # 2. Get the names of the new score columns
     new_columns = list(results_dataset.features)

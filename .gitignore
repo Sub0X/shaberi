@@ -174,3 +174,4 @@ output.csv
 
 !**/judgements/**/.placeholder
 !**/model_answers/**/.placeholder
+llm_error_payload.json

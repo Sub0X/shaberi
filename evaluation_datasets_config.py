@@ -294,17 +294,17 @@ def get_vntl_prompt_multi_score(data: dict) -> str:
 First, provide a brief reasoning for your scores based on the criteria. Then, provide all six scores as a JSON object inside <scores_json> tags.
 
 [Reasoning]
-Your reasoning here.
+Please provide a brief reasoning for your scores here.
 
 [Scores]
 <scores_json>
 {{
-  "score_accuracy": <int_from_1_to_10>,
-  "score_fluency": <int_from_1_to_10>,
-  "score_character_voice": <int_from_1_to_10>,
-  "score_tone": <int_from_1_to_10>,
-  "score_localization": <int_from_1_to_10>,
-  "score_direction_following": <int_from_1_to_10>
+  "score_accuracy": INTEGER_FROM_1_TO_10,
+  "score_fluency": INTEGER_FROM_1_TO_10,
+  "score_character_voice": INTEGER_FROM_1_TO_10,
+  "score_tone": INTEGER_FROM_1_TO_10,
+  "score_localization": INTEGER_FROM_1_TO_10,
+  "score_direction_following": INTEGER_FROM_1_TO_10
 }}
 </scores_json>
 """
