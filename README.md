@@ -90,12 +90,6 @@ Example `env.json`:
 - Use separate endpoints for answer generation and judging.
 - Robust multiprocessing support for large-scale evaluation.
 
-## Results
-
-![Model Score Comparison (Vertical)](assets/results/vertical_bar_chart_gpt-4.1.png)
-
-![Model Score Visual Novel Translation Comparison (Vertical)](assets/results/vntl_grid_gpt-4.1.png)
-
 ---
 
 # 日本語版 README
@@ -183,3 +177,16 @@ cat output.csv
 - 大規模評価向けの堅牢なマルチプロセス対応
 
 ---
+
+## Results
+
+24B - 32B Models Comparison
+
+![Model Score Comparison](assets/results/24B%20-%2032B/vertical_bar_chart_gpt-4.1.png)
+![Model Score Visual Novel Translation Comparison](assets/results/24B%20-%2032B/vntl_grid_gpt-4.1.png)
+
+
+6B - 8B Models Comparison
+
+![Model Score Comparison](assets/results/6b%20-%208b/vertical_bar_chart_gpt-4.1.png)
+![Model Score Visual Novel Translation Comparison](assets/results/6b%20-%208b/vntl_grid_gpt-4.1.png)
