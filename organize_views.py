@@ -26,18 +26,20 @@ MODEL_GROUPS = {
         "glm-4-32b",
         "shisa-v2-mistral-small-24b",
         "amoral-gemma3-27b-v2-qat",
-        "gemma-3-27b-it"
+        "gemma-3-27b-it",
+        "qwen3-30b-a3b-2507",
+        "gpt-oss-20b",
+        "exaone-4.0-32b"
     ],
-    "9B - 12B Model Range": [
+    "9B - 14B Model Range": [
         "phi-4",
-        "qwen3-14b",
         "qwen2.5-14b-instruct",
         "deepcogito_cogito-v1-preview-qwen-14b",
         "gemma-3-12b-it-abliterated-v2",
-        "shisa-ai.shisa-v2-unphi4-14b",
-        "shisa-ai.shisa-v2-mistral-nemo-12b"
+        "shisa-v2-unphi4-14b",
+        "shisa-v2-mistral-nemo-12b"
     ],
-    "6B - 8B Model Range": [
+    "4B - 8B Model Range": [
         "aya-expanse-8b-abliterated",
         "shisa-v2-qwen2.5-7b",
         "shisa-v2-llama3.1-8b",
@@ -48,7 +50,8 @@ MODEL_GROUPS = {
         "aixsatoshi-honyaku-multi-translator-swallow-ms7b",
         "gemma-3n-e4b-it",
         "qwen2.5-7b-instruct",
-        "deepcogito_cogito-v1-preview-llama-8b"
+        "deepcogito_cogito-v1-preview-llama-8b",
+        "qwen3-4b-2507"
     ]
     # You can add more groups like this:
     # "7B Model Range": ["model-a-7b", "model-b-7b"],

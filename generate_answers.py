@@ -6,6 +6,7 @@ import json
 from datasets import Dataset, load_dataset
 from evaluation_datasets_config import EVAL_MODEL_CONFIGS, get_ans_path
 from llm_functions import get_answerer
+import requests
 
 def process_vntl_entry_as_script(text: str):
     """

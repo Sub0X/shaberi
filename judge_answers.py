@@ -15,8 +15,18 @@ reasoning_pattern = re.compile(r'<(think|thinking|reason)>.*?</(think|thinking|r
 def remove_reasoning_tags(x):
     return {"ModelAnswer": reasoning_pattern.sub("", x.get("ModelAnswer", ""))}
 
-def apply_eval_and_unpack(data_row, eval_fn, evaluation_model):
-    scores = eval_fn(data_row, evaluation_model)
+def apply_eval_and_unpack(data_row, eval_fn, evaluation_model, evaluation_temperature):
+    try:
+        # Try passing temperature as a keyword first (best practice)
+        scores = eval_fn(data_row, evaluation_model, temperature=evaluation_temperature)
+    except TypeError:
+        try:
+            # Some evaluators may accept a positional temperature argument
+            scores = eval_fn(data_row, evaluation_model, evaluation_temperature)
+        except TypeError:
+            # Fallback to the original two-argument call for backward compatibility
+            scores = eval_fn(data_row, evaluation_model)
+
     if isinstance(scores, dict):
         # If the evaluator returns a dictionary, return it to be added as new columns
         return scores
@@ -24,7 +34,7 @@ def apply_eval_and_unpack(data_row, eval_fn, evaluation_model):
         # Otherwise, handle it as a single score
         return {"score": scores}
 
-def evaluate_with_llm(model_name: str, eval_dataset_name: str, evaluation_model: str, num_proc: int):
+def evaluate_with_llm(model_name: str, eval_dataset_name: str, evaluation_model: str, num_proc: int, evaluation_temperature: float):
     """
     Evaluates answers using a Language Model as a judge.
     This version handles both single scores and a dictionary of scores,
@@ -40,7 +50,7 @@ def evaluate_with_llm(model_name: str, eval_dataset_name: str, evaluation_model:
     ans_dataset = ans_dataset.map(remove_reasoning_tags, num_proc=num_proc)
 
     # Use functools.partial to pass extra args to the top-level function
-    eval_and_unpack = functools.partial(apply_eval_and_unpack, eval_fn=eval_fn, evaluation_model=evaluation_model)
+    eval_and_unpack = functools.partial(apply_eval_and_unpack, eval_fn=eval_fn, evaluation_model=evaluation_model, evaluation_temperature=evaluation_temperature)
     results_dataset = ans_dataset.map(eval_and_unpack, batched=False, num_proc=num_proc)
     
     # 2. Get the names of the new score columns
@@ -95,7 +105,7 @@ def evaluate_with_metrics(model_name: str, eval_dataset_name: str):
     print(f"✅ Metric-based judgements saved to {results_file_path}")
 
 
-def run_judgement(model_name: str, eval_dataset_name: str = "all", evaluation_model: str = "gpt-4-turbo-preview", num_proc: int = 8):
+def run_judgement(model_name: str, eval_dataset_name: str = "all", evaluation_model: str = "gpt-4-turbo-preview", num_proc: int = 8, evaluation_temp: float = 0.0):
     eval_dataset_names = list(EVAL_MODEL_CONFIGS.keys()) if eval_dataset_name == "all" else [eval_dataset_name]
     
     for eval_ds_name in eval_dataset_names:
@@ -124,8 +134,8 @@ def run_judgement(model_name: str, eval_dataset_name: str = "all", evaluation_mo
             print(f"Judging {model_name} on {eval_ds_name} using metrics")
             evaluate_with_metrics(model_name, eval_ds_name)
         elif "evaluator_function" in eval_config:
-            print(f"Judging {model_name} on {eval_ds_name} using judge model: {evaluation_model}")
-            evaluate_with_llm(model_name, eval_ds_name, evaluation_model, num_proc)
+            print(f"Judging {model_name} on {eval_ds_name} using judge model: {evaluation_model} (temp={evaluation_temp})")
+            evaluate_with_llm(model_name, eval_ds_name, evaluation_model, num_proc, evaluation_temp)
         else:
             print(f"Warning: No valid evaluation method found for {eval_ds_name}. Skipping.")
 
@@ -135,9 +145,10 @@ def main():
     parser.add_argument('-d', '--eval_dataset_name', type=str, default='all')
     parser.add_argument('-e', '--evaluation_model', type=str, default='gpt-4.1')
     parser.add_argument('-n', '--num_proc', type=int, default=8)
+    parser.add_argument('-t', '--temperature', type=float, default=0.2, help='Temperature for judge LLM')
     args = parser.parse_args()
     
-    run_judgement(args.model_name, args.eval_dataset_name, args.evaluation_model, args.num_proc)
+    run_judgement(args.model_name, args.eval_dataset_name, args.evaluation_model, args.num_proc, args.temperature)
 
 if __name__ == '__main__':
     main()

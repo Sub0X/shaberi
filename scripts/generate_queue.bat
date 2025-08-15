@@ -6,7 +6,7 @@ REM == Configuration
 REM ============================================================================
 
 REM Add the model names you want to process to this list, separated by spaces.
-set "MODELS_TO_RUN=mistral-small-3.1-24b-instruct-2503 mistral-small-3.2-24b-instruct-2506 aya-expanse-32b-abliterated amoral-gemma3-27b-v2-qat"
+set "MODELS_TO_RUN=qwen/qwen3-30b-a3b-2507"
 
 REM Set the number of processes to use for the map function in generate_answers.py.
 set "NUM_PROC=1"
@@ -26,7 +26,7 @@ for %%M in (%MODELS_TO_RUN%) do (
     echo =================================================================
     
     REM Run the python script to generate answers for the current model
-    python generate_answers.py -m "%%M" -n %NUM_PROC% -d "lmg-anon/VNTL-v3.1-1k" 
+    python generate_answers.py -m "%%M" -n %NUM_PROC%
     
     REM Check for errors after each command
     if %errorlevel% neq 0 (

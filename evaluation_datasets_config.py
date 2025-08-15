@@ -98,9 +98,9 @@ def make_tengu_conversation(data: dict) -> list:
         }
     ]
 
-def tengu_bench_evaluator(data:dict, model_name:str) -> int|None:
+def tengu_bench_evaluator(data:dict, model_name:str, temperature: float = None) -> int|None:
     messages = make_tengu_conversation(data)
-    evaluation = get_model_response(messages, model_name, judge=True)
+    evaluation = get_model_response(messages, model_name, judge=True, temperature=temperature)
     return get_tengu_eval_score(evaluation)
 
 ######### ELYZA ##########
@@ -145,10 +145,10 @@ def get_elyza_prompt(row: dict):
 最終スコア: <score>ここにスコアを記入</score>
 """
 
-def elyza_evaluator(data: dict, model_name:str) -> int|None:
+def elyza_evaluator(data: dict, model_name:str, temperature: float = None) -> int|None:
     prompt = get_elyza_prompt(data)
     messages = [{"role": "user", "content": prompt}]
-    evaluation = get_model_response(messages, model_name, judge=True)
+    evaluation = get_model_response(messages, model_name, judge=True, temperature=temperature)
     try:
         # Try to find score in XML tags first
         score_match = re.search(r"<score>([0-9.]+)</score>", evaluation)
@@ -177,10 +177,10 @@ def get_mt_prompt(row: dict):
 
 [アシスタントの回答の終了]"""
 
-def mt_evaluator(data: dict, model_name:str) -> int|None:
+def mt_evaluator(data: dict, model_name:str, temperature: float = None) -> int|None:
     prompt = get_mt_prompt(data)
     messages = [{"role": "user", "content": prompt}]
-    evaluation = get_model_response(messages, model_name, judge=True)
+    evaluation = get_model_response(messages, model_name, judge=True, temperature=temperature)
     try:
         score_text = re.search(r"評価：\[\[[0-9.]+\]\]", evaluation).group()
         score = re.search(r"[0-9.]+", score_text).group()
@@ -206,10 +206,10 @@ def get_rakuda_prompt(row: dict):
 
 [アシスタントの回答の終了]"""
 
-def rakuda_evaluator(data: dict, model_name:str) -> int|None:
+def rakuda_evaluator(data: dict, model_name:str, temperature: float = None) -> int|None:
     prompt = get_rakuda_prompt(data)
     messages = [{"role": "user", "content": prompt}]
-    evaluation = get_model_response(messages, model_name, judge=True)
+    evaluation = get_model_response(messages, model_name, judge=True, temperature=temperature)
     try:
         score_text = re.search(r"評価：(\[\[|\[|【)[0-9.]+(\]\]|\]|】)", evaluation).group()
         score = re.search(r"[0-9.]+", score_text).group()
@@ -309,14 +309,14 @@ Please provide a brief reasoning for your scores here.
 </scores_json>
 """
 
-def vntl_multi_score_evaluator(data: dict, model_name: str) -> dict | None:
+def vntl_multi_score_evaluator(data: dict, model_name: str, temperature: float = None) -> dict | None:
     """
     Calls the LLM judge with the detailed VNTL prompt and parses the six-part score.
     """
     prompt = get_vntl_prompt_multi_score(data)
     messages = [{"role": "user", "content": prompt}]
     
-    evaluation = get_model_response(messages, model_name, judge=True)
+    evaluation = get_model_response(messages, model_name, judge=True, temperature=temperature)
     
     try:
         # Use regex to find the JSON block. re.DOTALL allows '.' to match newlines.
@@ -334,7 +334,7 @@ def vntl_multi_score_evaluator(data: dict, model_name: str) -> dict | None:
         raise ValueError("Could not find all required score keys in the JSON block.")
     except (orjson.JSONDecodeError, AttributeError, ValueError) as e:
         print(f"Could not parse VNTL scores from evaluation. Error: {e}")
-        print(f"Evaluation content:\\n{evaluation}")
+        print(f"Evaluation content:\n{evaluation}")
         return None
 
 

@@ -26,9 +26,9 @@ def get_response_func(model_name: str) -> callable:
     return get_answer
 
 
-def get_model_response(messages: list, model_name: str, judge: bool = False) -> str:
+def get_model_response(messages: list, model_name: str, judge: bool = False, temperature: float = None) -> str:
     answer_function = get_response_func(model_name)
-    return answer_function(messages, model_name, judge=judge)
+    return answer_function(messages, model_name, judge=judge, temperature=temperature)
 
 
 # === This is the decorated function for the final retry attempt ===
@@ -57,10 +57,10 @@ def completion_with_backoff(**kwargs):
 def get_answer_with_backoff(*args, **kwargs):
     return _get_answer_inner(*args, **kwargs)
 
-def get_answer(question, model_name: str, judge: bool = False, prompt_template: str = None):
-    return get_answer_with_backoff(question, model_name, judge, prompt_template)
+def get_answer(question, model_name: str, judge: bool = False, prompt_template: str = None, temperature: float = None):
+    return get_answer_with_backoff(question, model_name, judge, prompt_template, temperature=temperature)
 
-def _get_answer_inner(question, model_name: str, judge: bool = False, prompt_template: str = None):
+def _get_answer_inner(question, model_name: str, judge: bool = False, prompt_template: str = None, temperature: float = 0.2):
     if judge:
         api_keys = ENV.get("OPENAI_JUDGE_API_KEY", [])
         base_url = ENV.get("OPENAI_JUDGE_BASE_URL", "")
@@ -80,7 +80,7 @@ def _get_answer_inner(question, model_name: str, judge: bool = False, prompt_tem
     if base_url is None:
         base_url = "http://localhost:8080/v1"
     
-    generation_temperature = 0.2
+    # Use provided temperature if given, otherwise fall back to the existing default
     generation_max_tokens = 6000
 
     if isinstance(question, dict) and prompt_template:
@@ -98,36 +98,44 @@ def _get_answer_inner(question, model_name: str, judge: bool = False, prompt_tem
             {"role": "user", "content": question},
         ]
 
-    # --- Round-robin key selection with retry on rate limit ---
+    # --- Round-robin key selection with retry on rate limit, repeating rounds until success or backoff ---
     global _key_counter
     num_keys = len(api_keys)
-    for attempt in range(num_keys):
-        with _key_counter_lock:
-            key_index = _key_counter % num_keys
-            _key_counter += 1
-        key = api_keys[key_index]
-        try:
-            completion_args = {
-                "messages": messages, "api_base": base_url, "api_key": key,
-                "temperature": generation_temperature, "max_tokens": generation_max_tokens,
-                "timeout": 1200, "model": model_name, "frequency_penalty": fp,
-                "min_p": 0.1, "custom_llm_provider": "openai"
-            }
-            if "google" in base_url:
-                completion_args.pop("frequency_penalty", None)
-                completion_args.pop("min_p", None)
-            response = completion(**completion_args)
-            content = response.choices[0].message.content
-            return content
-        except litellm.RateLimitError as e:
-            print(f"[WARN] Rate limit hit for key ending in '...{key[-4:]}'. Trying next key.")
+    while True:
+        last_exception = None
+        for attempt in range(num_keys):
+            with _key_counter_lock:
+                key_index = _key_counter % num_keys
+                _key_counter += 1
+            key = api_keys[key_index]
+            try:
+                completion_args = {
+                    "messages": messages, "api_base": base_url, "api_key": key,
+                    "temperature": temperature, "max_tokens": generation_max_tokens,
+                    "timeout": 1200, "model": model_name, "frequency_penalty": fp,
+                    "min_p": 0.1, "custom_llm_provider": "openai"
+                }
+                if "google" in base_url:
+                    completion_args.pop("frequency_penalty", None)
+                    completion_args.pop("min_p", None)
+                response = completion(**completion_args)
+                content = response.choices[0].message.content
+                return content
+            except litellm.RateLimitError as e:
+                print(f"[WARN] Rate limit hit for key ending in '...{key[-4:]}'. Trying next key.")
+                last_exception = e
+                continue
+            except Exception as e:
+                if isinstance(e, (litellm.InternalServerError, litellm.APIConnectionError, litellm.Timeout)):
+                    last_exception = e
+                    raise  # Let backoff handle these
+                print(f"[ERROR] An unexpected error occurred with key ending in '...{key[-4:]}': {e}")
+                raise RuntimeError(f"LLM error: {e}")
+        # If all keys hit rate limit, repeat the round (backoff will still limit total retries)
+        if last_exception:
+            print("[INFO] All API keys hit rate limit in this round. Retrying all keys...")
             continue
-        except Exception as e:
-            print(f"[ERROR] An unexpected error occurred with key ending in '...{key[-4:]}': {e}")
-            # Re-raise as a standard error to avoid multiprocessing pickle issues
-            raise RuntimeError(f"LLM error: {e}")
-    # If all keys hit rate limit, raise to trigger backoff
-    raise RuntimeError("All API keys hit rate limit.")
+        raise RuntimeError("All API keys hit rate limit.")
 
 
 def get_answerer(model_name: str, judge: bool = False, prompt_template: str = None) -> callable:
