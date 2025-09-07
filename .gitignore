@@ -129,7 +129,6 @@ env.bak/
 venv.bak/
 
 # Model Results in data
-data/*/*/*/*.json
 
 # Spyder project settings
 .spyderproject
@@ -172,6 +171,6 @@ output.csv
 # **/judgements/**/*.json
 # **/model_answers/**/*.json
 
-!**/judgements/**/.placeholder
-!**/model_answers/**/.placeholder
+# !**/judgements/**/.placeholder
+# !**/model_answers/**/.placeholder
 llm_error_payload.json
