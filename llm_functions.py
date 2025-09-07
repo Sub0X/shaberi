@@ -94,7 +94,7 @@ def _get_answer_inner(question, model_name: str, judge: bool = False, prompt_tem
         messages = [{"role": "user", "content": prompt_template.format(question=question)}]
     else:
         system_content = None
-        if "SYSTEM_PROMPT" in ENV and ENV["SYSTEM_PROMPT"]:
+        if "SYSTEM_PROMPT" in ENV and ENV["SYSTEM_PROMPT"] != "":
             system_content = {"role": "system", "content": ENV["SYSTEM_PROMPT"]}
         
         messages = [
