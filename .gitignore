@@ -169,8 +169,8 @@ model-size_vs_score.svg
 summary_output.csv
 output.csv
 
-**/judgements/**/*.json
-**/model_answers/**/*.json
+# **/judgements/**/*.json
+# **/model_answers/**/*.json
 
 !**/judgements/**/.placeholder
 !**/model_answers/**/.placeholder
