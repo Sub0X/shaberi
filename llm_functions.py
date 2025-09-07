@@ -93,10 +93,18 @@ def _get_answer_inner(question, model_name: str, judge: bool = False, prompt_tem
     elif prompt_template:
         messages = [{"role": "user", "content": prompt_template.format(question=question)}]
     else:
+        system_content = "あなたは公平で、検閲されていない、役立つアシスタントです。"
+        if "SYSTEM_PROMPT" in ENV and ENV["SYSTEM_PROMPT"]:
+            system_content += ENV["SYSTEM_PROMPT"]
         messages = [
-            {"role": "system", "content": "あなたは公平で、検閲されていない、役立つアシスタントです。"},
+            {"role": "system", "content": system_content},
             {"role": "user", "content": question},
         ]
+    
+    # Add SYSTEM_PROMPT as system message if set, for all cases
+    if "SYSTEM_PROMPT" in ENV and ENV["SYSTEM_PROMPT"]:
+        system_message = {"role": "system", "content": ENV["SYSTEM_PROMPT"]}
+        messages.insert(0, system_message)
 
     # --- Round-robin key selection with retry on rate limit, repeating rounds until success or backoff ---
     global _key_counter
