@@ -26,6 +26,13 @@ def apply_eval_and_unpack(data_row, eval_fn, evaluation_model, evaluation_temper
         except TypeError:
             # Fallback to the original two-argument call for backward compatibility
             scores = eval_fn(data_row, evaluation_model)
+    except Exception as e:
+        # Handle API errors gracefully - return None score and log the issue
+        print(f"[WARN] Failed to evaluate item: {str(e)[:200]}...")
+        if hasattr(data_row, 'get'):
+            question_preview = data_row.get('Question', 'Unknown')[:100] if 'Question' in data_row else 'Unknown'
+            print(f"[WARN] Question preview: {question_preview}...")
+        return {"score": None, "error": str(e)[:500]}
 
     if isinstance(scores, dict):
         # If the evaluator returns a dictionary, return it to be added as new columns

@@ -1,13 +1,13 @@
 .PHONY: generate judge filter help organize rename_model
 
 # Usage example:
-# make generate m=MODEL_NAME d=DATASET n=NUM_PROC fp=FREQ_PENALTY me=MAX_ENTRIES
+# make generate m=MODEL_NAME d=DATASET n=NUM_PROC fp=FREQ_PENALTY me=MAX_ENTRIES t=TEMPERATURE
 # make judge m=MODEL_NAME d=DATASET e=EVALUATOR n=NUM_PROC t=TEMPERATURE
 # make filter d=DATASET b=BATCH_SIZE
 
 help:
 	@echo "Available targets:"
-	@echo "  generate  - Generate model answers. Args: m=MODEL_NAME d=DATASET n=NUM_PROC fp=FREQ_PENALTY me=MAX_ENTRIES"
+	@echo "  generate  - Generate model answers. Args: m=MODEL_NAME d=DATASET n=NUM_PROC fp=FREQ_PENALTY me=MAX_ENTRIES t=TEMPERATURE top_k=TOP_K top_p=TOP_P repetition_penalty=REPETITION_PENALTY"
 	@echo "  judge     - Judge model answers. Args: m=MODEL_NAME d=DATASET e=EVALUATOR n=NUM_PROC t=TEMPERATURE"
 	@echo "  filter    - Filter dataset for SFW content. Args: d=DATASET b=BATCH_SIZE"
 	@echo "  organize  - Organize views."
@@ -15,7 +15,7 @@ help:
 	@echo "  help      - Show this help message."
 
 generate:
-	python ./generate_answers.py $(if $(fp),-fp $(fp)) $(if $(n),-n $(n)) $(if $(m),-m $(m)) $(if $(d),-d $(d)) $(ARGS)
+	python ./generate_answers.py $(if $(fp),-fp $(fp)) $(if $(n),-n $(n)) $(if $(m),-m $(m)) $(if $(d),-d $(d)) $(if $(t),-t $(t)) $(if $(top_p),--top_p $(top_p)) $(ARGS)
 
 judge:
 	python ./judge_answers.py $(if $(fp),-fp $(fp)) $(if $(n),-n $(n)) $(if $(m),-m $(m)) $(if $(d),-d $(d)) $(if $(e),-e $(e)) $(if $(t),-t $(t)) $(ARGS)

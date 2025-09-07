@@ -29,7 +29,10 @@ MODEL_GROUPS = {
         "gemma-3-27b-it",
         "qwen3-30b-a3b-2507",
         "gpt-oss-20b",
-        "exaone-4.0-32b"
+        "exaone-4.0-32b",
+        "internvl3_5-30b-a3b",
+        "ernie-4.5-21b-a3b",
+        "gpt-oss-120b"
     ],
     "9B - 14B Model Range": [
         "phi-4",
@@ -51,7 +54,9 @@ MODEL_GROUPS = {
         "gemma-3n-e4b-it",
         "qwen2.5-7b-instruct",
         "deepcogito_cogito-v1-preview-llama-8b",
-        "qwen3-4b-2507"
+        "qwen3-4b-2507",
+        "hunyuan-mt-chimera-7b",
+        "hunyuan-mt-7b"
     ]
     # You can add more groups like this:
     # "7B Model Range": ["model-a-7b", "model-b-7b"],

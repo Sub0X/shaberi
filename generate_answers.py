@@ -27,7 +27,7 @@ def process_vntl_entry_as_script(text: str):
         "ENGLISH_SCRIPT": english_script
     }
 
-def run_generate(model_name: str, eval_dataset_name: str = "all", num_proc: int = 16, max_entries: int = 200):
+def run_generate(model_name: str, eval_dataset_name: str = "all", num_proc: int = 16, max_entries: int = 200, temperature: float = 0.2, top_p: float = None):
     """
     Generates answers for evaluation datasets using the specified model.
     Args:
@@ -72,7 +72,7 @@ def run_generate(model_name: str, eval_dataset_name: str = "all", num_proc: int 
             processed_entries = [entry for entry in processed_entries if entry is not None]
             processed_dataset = Dataset.from_list(processed_entries)
             prompt_template = eval_config.get("prompt_template")
-            answer_function = get_answerer(model_name, judge=False, prompt_template=prompt_template)
+            answer_function = get_answerer(model_name, judge=False, prompt_template=prompt_template, temperature=temperature, top_p=top_p)
             print(f"Generating answers for {model_name}...")
             final_dataset = processed_dataset.map(
                 lambda x: {"ModelAnswer": answer_function(
@@ -89,7 +89,7 @@ def run_generate(model_name: str, eval_dataset_name: str = "all", num_proc: int 
             if q_col != "Question":
                 dataset = dataset.rename_column(q_col, "Question")
             print(f"Generating answers for {model_name}...")
-            answer_function = get_answerer(model_name, judge=False)
+            answer_function = get_answerer(model_name, judge=False, temperature=temperature, top_p=top_p)
             final_dataset = dataset.map(
                 lambda x: {"ModelAnswer": answer_function(x['Question'], model_name)},
                 num_proc=num_proc
@@ -108,8 +108,10 @@ def main():
     parser.add_argument('-n', '--num_proc', type=int, default=8)
     parser.add_argument('-fp', '--frequency_penalty', type=float, default=0.5)
     parser.add_argument('-me', '--max_entries', type=int, default=200)
+    parser.add_argument('-t', '--temperature', type=float, default=0.2, help='Temperature for model generation')
+    parser.add_argument('--top_p', type=float, help='Top-p sampling parameter')
     args = parser.parse_args()
-    run_generate(args.model_name, args.eval_dataset_name, args.num_proc, args.max_entries)
+    run_generate(args.model_name, args.eval_dataset_name, args.num_proc, args.max_entries, args.temperature, args.top_p)
 
 if __name__ == '__main__':
     main()
