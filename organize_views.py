@@ -43,7 +43,8 @@ MODEL_GROUPS = {
         "shisa-v2-mistral-nemo-12b",
         "nvidia-nemotron-nano-9b-v2",
         "nvidia-nemotron-nano-12b-v2",
-        "internvl3_5-14b"
+        "internvl3_5-14b",
+        "gemma-3-12b-it"
     ],
     "4B - 8B Model Range": [
         "aya-expanse-8b-abliterated",
@@ -61,7 +62,6 @@ MODEL_GROUPS = {
         "hunyuan-mt-chimera-7b",
         "hunyuan-mt-7b",
         "gemma-3-4b",
-        "gemma-3-12b-it",
         "internvl3_5-4b",
         "internvl3_5-8b"
     ],
