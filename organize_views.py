@@ -42,6 +42,7 @@ MODEL_GROUPS = {
         "shisa-v2-unphi4-14b",
         "shisa-v2-mistral-nemo-12b",
         "nvidia-nemotron-nano-9b-v2",
+        "nvidia-nemotron-nano-12b-v2",
         "internvl3_5-14b"
     ],
     "4B - 8B Model Range": [
