@@ -17,7 +17,10 @@ REFERENCE_MODELS = [
 # Define your model groups. Add or edit groups and models as needed.
 # The script will try to find models containing these strings in their names.
 MODEL_GROUPS = {
-    "24B - 32B Model Range": [
+    "100B+ Model Range": [
+        "gpt-oss-120b",
+    ],
+    "20B - 32B Model Range": [
         "aya-expanse-32b",
         "mistral-small-3.1-24b",
         "mistral-small-3.2-24b",
@@ -28,11 +31,9 @@ MODEL_GROUPS = {
         "amoral-gemma3-27b-v2-qat",
         "gemma-3-27b-it",
         "qwen3-30b-a3b-2507",
-        "gpt-oss-20b",
         "exaone-4.0-32b",
         "internvl3_5-30b-a3b",
         "ernie-4.5-21b-a3b",
-        "gpt-oss-120b"
     ],
     "9B - 14B Model Range": [
         "phi-4",
