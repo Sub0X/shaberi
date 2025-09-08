@@ -6,16 +6,19 @@ REM == Configuration
 REM ============================================================================
 
 REM Add the model names you want to process to this list, separated by spaces.
-set "MODELS_TO_RUN="
+set "MODELS_TO_RUN=internvl3_5-8b"
+
+@REM nvidia-nemotron-nano-9b-v2 nvidia-nemotron-nano-12b-v2 gemma-3-4b gemma-3-12b-it internvl3_5-4b 
 
 REM When set to true the script will scan data\model_answers and judge all models found there.
-set "judge_all=true"
+set "judge_all=false"
 
 REM Set the judge model to use for the evaluation.
-set "JUDGE_MODEL=gpt-5-mini"
+REM gpt-5-mini
+set "JUDGE_MODEL=gpt-4.1 "
 
 REM Set the number of processes to use for the map function in judge_answers.py.
-set "NUM_PROC=4"
+set "NUM_PROC=8"
 
 REM Set the temperature for the judge model.
 set "TEMPERATURE=1.0"

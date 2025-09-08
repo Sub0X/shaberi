@@ -40,7 +40,9 @@ MODEL_GROUPS = {
         "deepcogito_cogito-v1-preview-qwen-14b",
         "gemma-3-12b-it-abliterated-v2",
         "shisa-v2-unphi4-14b",
-        "shisa-v2-mistral-nemo-12b"
+        "shisa-v2-mistral-nemo-12b",
+        "nvidia-nemotron-nano-9b-v2",
+        "internvl3_5-14b"
     ],
     "4B - 8B Model Range": [
         "aya-expanse-8b-abliterated",
@@ -56,7 +58,16 @@ MODEL_GROUPS = {
         "deepcogito_cogito-v1-preview-llama-8b",
         "qwen3-4b-2507",
         "hunyuan-mt-chimera-7b",
-        "hunyuan-mt-7b"
+        "hunyuan-mt-7b",
+        "gemma-3-4b",
+        "gemma-3-12b-it",
+        "internvl3_5-4b",
+        "internvl3_5-8b"
+    ],
+    "200M - 3B Model Range": [
+        "lfm2-350m",
+        "lfm2-1.2b",
+        "gemma-3-1b-it"
     ]
     # You can add more groups like this:
     # "7B Model Range": ["model-a-7b", "model-b-7b"],
