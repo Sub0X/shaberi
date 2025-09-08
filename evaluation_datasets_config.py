@@ -100,8 +100,16 @@ def make_tengu_conversation(data: dict) -> list:
         }
     ]
 
-def tengu_bench_evaluator(data:dict, model_name:str, temperature: float = None) -> int|None:
+def tengu_bench_evaluator(data:dict, model_name:str, temperature: float = None, retry_attempt: bool = False) -> int|None:
     messages = make_tengu_conversation(data)
+    
+    # On retry, add emphatic format instructions
+    if retry_attempt:
+        messages.append({
+            "role": "user", 
+            "content": "**CRITICAL: You MUST follow the exact format and include the <score> tags with a numerical score. This is your final attempt.**"
+        })
+    
     evaluation = get_model_response(messages, model_name, judge=True, temperature=temperature)
     return get_tengu_eval_score(evaluation)
 
@@ -147,8 +155,13 @@ def get_elyza_prompt(row: dict):
 最終スコア: <score>ここにスコアを記入</score>
 """
 
-def elyza_evaluator(data: dict, model_name:str, temperature: float = None) -> int|None:
+def elyza_evaluator(data: dict, model_name:str, temperature: float = None, retry_attempt: bool = False) -> int|None:
     prompt = get_elyza_prompt(data)
+    
+    # On retry, add emphatic format instructions
+    if retry_attempt:
+        prompt += "\n\n**CRITICAL: You MUST provide a score in <score> tags. This is your final attempt.**"
+    
     messages = [{"role": "user", "content": prompt}]
     evaluation = get_model_response(messages, model_name, judge=True, temperature=temperature)
     try:
@@ -179,8 +192,13 @@ def get_mt_prompt(row: dict):
 
 [アシスタントの回答の終了]"""
 
-def mt_evaluator(data: dict, model_name:str, temperature: float = None) -> int|None:
+def mt_evaluator(data: dict, model_name:str, temperature: float = None, retry_attempt: bool = False) -> int|None:
     prompt = get_mt_prompt(data)
+    
+    # On retry, add emphatic format instructions
+    if retry_attempt:
+        prompt += "\n\n**CRITICAL: You MUST provide your evaluation in the exact format '評価：[[数字]]'. This is your final attempt.**"
+    
     messages = [{"role": "user", "content": prompt}]
     evaluation = get_model_response(messages, model_name, judge=True, temperature=temperature)
     try:
@@ -208,8 +226,13 @@ def get_rakuda_prompt(row: dict):
 
 [アシスタントの回答の終了]"""
 
-def rakuda_evaluator(data: dict, model_name:str, temperature: float = None) -> int|None:
+def rakuda_evaluator(data: dict, model_name:str, temperature: float = None, retry_attempt: bool = False) -> int|None:
     prompt = get_rakuda_prompt(data)
+    
+    # On retry, add emphatic format instructions
+    if retry_attempt:
+        prompt += "\n\n**CRITICAL: You MUST provide your evaluation in the exact format '評価：[[数字]]' or '評価：[数字]'. This is your final attempt.**"
+    
     messages = [{"role": "user", "content": prompt}]
     evaluation = get_model_response(messages, model_name, judge=True, temperature=temperature)
     try:
@@ -311,11 +334,16 @@ Please provide a brief reasoning for your scores here.
 </scores_json>
 """
 
-def vntl_multi_score_evaluator(data: dict, model_name: str, temperature: float = None) -> dict | None:
+def vntl_multi_score_evaluator(data: dict, model_name: str, temperature: float = None, retry_attempt: bool = False) -> dict | None:
     """
     Calls the LLM judge with the detailed VNTL prompt and parses the six-part score.
     """
     prompt = get_vntl_prompt_multi_score(data)
+    
+    # On retry, add emphatic format instructions
+    if retry_attempt:
+        prompt += "\n\n**CRITICAL: You MUST follow the exact format. Your response MUST include ALL SIX scores in the JSON format inside <scores_json> tags. DO NOT deviate from this format or skip any scores. This is your final attempt.**"
+    
     messages = [{"role": "user", "content": prompt}]
     
     evaluation = get_model_response(messages, model_name, judge=True, temperature=temperature)

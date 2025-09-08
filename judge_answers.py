@@ -15,31 +15,78 @@ reasoning_pattern = re.compile(r'<(think|thinking|reason)>.*?</(think|thinking|r
 def remove_reasoning_tags(x):
     return {"ModelAnswer": reasoning_pattern.sub("", x.get("ModelAnswer", ""))}
 
-def apply_eval_and_unpack(data_row, eval_fn, evaluation_model, evaluation_temperature):
-    try:
-        # Try passing temperature as a keyword first (best practice)
-        scores = eval_fn(data_row, evaluation_model, temperature=evaluation_temperature)
-    except TypeError:
+def apply_eval_and_unpack(data_row, eval_fn, evaluation_model, evaluation_temperature, eval_dataset_name):
+    for attempt in range(2):
+        retry_attempt = (attempt == 1)
         try:
-            # Some evaluators may accept a positional temperature argument
-            scores = eval_fn(data_row, evaluation_model, evaluation_temperature)
-        except TypeError:
-            # Fallback to the original two-argument call for backward compatibility
-            scores = eval_fn(data_row, evaluation_model)
-    except Exception as e:
-        # Handle API errors gracefully - return None score and log the issue
-        print(f"[WARN] Failed to evaluate item: {str(e)[:200]}...")
-        if hasattr(data_row, 'get'):
-            question_preview = data_row.get('Question', 'Unknown')[:100] if 'Question' in data_row else 'Unknown'
-            print(f"[WARN] Question preview: {question_preview}...")
-        return {"score": None, "error": str(e)[:500]}
-
-    if isinstance(scores, dict):
-        # If the evaluator returns a dictionary, return it to be added as new columns
-        return scores
-    else:
-        # Otherwise, handle it as a single score
-        return {"score": scores}
+            # Try passing temperature as a keyword first (best practice)
+            try:
+                scores = eval_fn(data_row, evaluation_model, temperature=evaluation_temperature, retry_attempt=retry_attempt)
+            except TypeError:
+                try:
+                    # Some evaluators may accept a positional temperature argument
+                    scores = eval_fn(data_row, evaluation_model, evaluation_temperature, retry_attempt=retry_attempt)
+                except TypeError:
+                    # Fallback to the original two-argument call for backward compatibility
+                    scores = eval_fn(data_row, evaluation_model, retry_attempt=retry_attempt)
+            
+            # Check if scores is None (format parsing failure) and retry on first attempt
+            if scores is None and attempt == 0:
+                print(f"[WARN] Format parsing failed (attempt 1) - response did not follow expected format")
+                if hasattr(data_row, 'get'):
+                    question_preview = data_row.get('Question', 'Unknown')[:100] if 'Question' in data_row else 'Unknown'
+                    print(f"[WARN] Question preview: {question_preview}...")
+                continue
+            elif scores is None and attempt == 1:
+                print(f"[WARN] Format parsing failed (attempt 2) - skipping this evaluation")
+                if hasattr(data_row, 'get'):
+                    question_preview = data_row.get('Question', 'Unknown')[:100] if 'Question' in data_row else 'Unknown'
+                    print(f"[WARN] Question preview: {question_preview}...")
+                # Return the appropriate None dict
+                if eval_dataset_name == "lmg-anon/VNTL-v3.1-1k":
+                    return {
+                        "score_accuracy": None,
+                        "score_fluency": None,
+                        "score_character_voice": None,
+                        "score_tone": None,
+                        "score_localization": None,
+                        "score_direction_following": None,
+                        "error": "Format parsing failed after 2 attempts"
+                    }
+                else:
+                    return {"score": None, "error": "Format parsing failed after 2 attempts"}
+            
+            # If we get here, scores is not None, so we can return it
+            if isinstance(scores, dict):
+                return scores
+            else:
+                return {"score": scores}
+                
+        except Exception as e:
+            if attempt == 0:
+                print(f"[WARN] Failed to evaluate item (attempt 1): {str(e)[:200]}...")
+                if hasattr(data_row, 'get'):
+                    question_preview = data_row.get('Question', 'Unknown')[:100] if 'Question' in data_row else 'Unknown'
+                    print(f"[WARN] Question preview: {question_preview}...")
+                continue
+            else:
+                print(f"[WARN] Failed to evaluate item (attempt 2): {str(e)[:200]}...")
+                if hasattr(data_row, 'get'):
+                    question_preview = data_row.get('Question', 'Unknown')[:100] if 'Question' in data_row else 'Unknown'
+                    print(f"[WARN] Question preview: {question_preview}...")
+                # Return the appropriate None dict
+                if eval_dataset_name == "lmg-anon/VNTL-v3.1-1k":
+                    return {
+                        "score_accuracy": None,
+                        "score_fluency": None,
+                        "score_character_voice": None,
+                        "score_tone": None,
+                        "score_localization": None,
+                        "score_direction_following": None,
+                        "error": str(e)[:500]
+                    }
+                else:
+                    return {"score": None, "error": str(e)[:500]}
 
 def evaluate_with_llm(model_name: str, eval_dataset_name: str, evaluation_model: str, num_proc: int, evaluation_temperature: float):
     """
@@ -57,7 +104,7 @@ def evaluate_with_llm(model_name: str, eval_dataset_name: str, evaluation_model:
     ans_dataset = ans_dataset.map(remove_reasoning_tags, num_proc=num_proc)
 
     # Use functools.partial to pass extra args to the top-level function
-    eval_and_unpack = functools.partial(apply_eval_and_unpack, eval_fn=eval_fn, evaluation_model=evaluation_model, evaluation_temperature=evaluation_temperature)
+    eval_and_unpack = functools.partial(apply_eval_and_unpack, eval_fn=eval_fn, evaluation_model=evaluation_model, evaluation_temperature=evaluation_temperature, eval_dataset_name=eval_dataset_name)
     results_dataset = ans_dataset.map(eval_and_unpack, batched=False, num_proc=num_proc)
     
     # 2. Get the names of the new score columns
