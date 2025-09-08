@@ -17,7 +17,9 @@ REFERENCE_MODELS = [
 # Define your model groups. Add or edit groups and models as needed.
 # The script will try to find models containing these strings in their names.
 MODEL_GROUPS = {
-    "100B+ Model Range": [
+    "200B+ Model Range": [
+    ],
+    "70B - 120B Model Range": [
         "gpt-oss-120b",
     ],
     "20B - 32B Model Range": [
